@@ -1,0 +1,29 @@
+{
+    "participant_id": {
+        "Description": "Short identifier for monkey (e.g., used in file names)"
+    },
+    "species": {
+        "Description": "Binomial species name (genus, species within genus)"
+    },
+    "sex": {
+        "Description": "Gender (male or female)"
+    },
+    "birthdate": {
+        "Description": "Date of birth"
+    },
+    "handedness": {
+        "Description": "Trained hand (left and/or right)"
+    },
+    "trivial_name": {
+        "Description": "Commonly used (trivial) species name"
+    },
+    "given_name": {
+        "Description": "Given name"
+    },
+    "disabilities": {
+        "Description": "Comment on existing disabilities"
+    },
+    "character": {
+        "Description": "Comment on the general character/personality"
+    }
+}

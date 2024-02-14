@@ -78,26 +78,6 @@ def save_to_tsv(dataframe, path, filename):
     except Exception as e:
         print(f"Error saving file {filename}: {e}")
         
-def format_datetime_columns(df, date_cols, time_cols):
-    """
-    Formats the columns in a DataFrame as date or time.
-
-    Parameters:
-    df (pandas.DataFrame): The DataFrame containing the columns to be formatted.
-    date_cols (list): List of column names in the DataFrame to be formatted as dates.
-    time_cols (list): List of column names in the DataFrame to be formatted as times.
-    """
-    for col in date_cols:
-        try:
-            df[col] = pd.to_datetime(df[col]).dt.strftime('%Y-%m-%d')
-        except Exception as e:
-            print(f"Error converting column {col} to date format: {e}")
-
-    for col in time_cols:
-        try:
-            df[col] = df[col].apply(lambda x: x.strftime('%H:%M:%S') if not pd.isnull(x) else None)
-        except Exception as e:
-            print(f"Error converting column {col} to time format: {e}")
             
 
 def create_json_for_tsv(metadata, tsv_headers, odml_keys, json_file_path, section_name):
@@ -122,65 +102,34 @@ def create_json_for_tsv(metadata, tsv_headers, odml_keys, json_file_path, sectio
 
 
 
-def create_participants_df(metadata, participants_tsv_headers, odml_keys):
+def create_metadata_df(metadata, section, tsv_headers, odml_keys):
     """
-    Creates a DataFrame for participants based on metadata.
+    Creates a DataFrame based on metadata for a specified section.
 
     Parameters:
-    metadata (odml.Document): The odML document containing participant metadata.
-    participants_tsv_headers (list): List of headers for the participants TSV file.
+    metadata (odml.Document): The odML document containing metadata.
+    section (str): The section in the odML document to use (e.g., 'Subject', 'Recording', 'UtahArray').
+    tsv_headers (list): List of headers for the TSV file.
     odml_keys (list): List of odML keys corresponding to the TSV headers.
+    date_time_info (dict, optional): Information for formatting date-time columns. Should contain 'date_cols' and 'time_cols' as lists.
 
     Returns:
-    dict: A dictionary representing a row in the participants DataFrame.
+    pandas.DataFrame: A DataFrame containing the specified metadata.
     """
-    return {header: metadata['Subject'].properties[key].values[0] for header, key in zip(participants_tsv_headers, odml_keys)}
+    df = pd.DataFrame(columns=tsv_headers)
+    if section:
+        section_odml = metadata[section]
+    else:
+        section_odml = metadata
+
+    for i, (header, key) in enumerate(zip(tsv_headers, odml_keys)):
+        value = extract_odml_value(section_odml, key)  # Extract value from odML
+        df.loc[0, header] = value
+
+    return df
 
 
-def create_sessions_df(metadata, sessions_tsv_headers, sessions_odml_keys):
-    """
-    Creates a DataFrame for session information based on metadata.
-
-    Parameters:
-    metadata (odml.Document): The odML document containing session metadata.
-    sessions_tsv_headers (list): List of headers for the sessions TSV file.
-    sessions_odml_keys (list): List of odML keys corresponding to the TSV headers.
-
-    Returns:
-    pandas.DataFrame: A DataFrame containing session information.
-    """
-    sessions_df = pd.DataFrame(columns=sessions_tsv_headers)
-    session_odml = metadata['Recording']
-    for header, key in zip(sessions_tsv_headers, sessions_odml_keys):
-        session_value = extract_odml_value(session_odml, key)
-        sessions_df[header] = [session_value]
-
-    format_datetime_columns(sessions_df, date_cols=['session_date'], time_cols=['acq_time'])
-
-    return sessions_df
-
-def create_probes_df(metadata, probes_tsv_headers, probes_odml_keys):
-    """
-    Creates a DataFrame for probes information based on metadata.
-
-    Parameters:
-    metadata (odml.Document): The odML document containing session metadata.
-    sessions_tsv_headers (list): List of headers for the sessions TSV file.
-    sessions_odml_keys (list): List of odML keys corresponding to the TSV headers.
-
-    Returns:
-    pandas.DataFrame: A DataFrame containing session information.
-    """
-    probes_df = pd.DataFrame(columns=probes_tsv_headers)
-    probes_odml = metadata['UtahArray']
-    for header, key in zip(probes_tsv_headers, probes_odml_keys):
-        probes_value = extract_odml_value(probes_odml, key)
-        probes_df[header] = [probes_value]
-
-    return probes_df
-
-
-# Main Execution
+# Create BIDS directory structure
 subj_sess_runs = {'l': [{'101210': '001'}], 'i': [{'140703': '001'}]}
 ephys_files = ['ephys.nix', 'ephys.json', 'channels.tsv', 'contacts.tsv', 'probes.tsv', 'events.tsv']
 task = 'r2g'
@@ -188,26 +137,32 @@ base_dir = 'r2g_bids'
 
 create_bids_directory_structure(subj_sess_runs, base_dir, ephys_files, task)
 
+# Load odML metadata
+
 monkeyL_metadata = load_odml_metadata('multielectrode_grasp/datasets_blackrock/l101210-001.odml')
 monkeyN_metadata = load_odml_metadata('multielectrode_grasp/datasets_blackrock/i140703-001.odml')
+
+# Participants files
 
 participants_tsv_headers = ['participant_id', 'species', 'sex', 'birthdate', 'handedness', 'trivial_name', 'given_name', 'disabilities', 'character']
 odml_keys = ['Identifier', 'Species', 'Gender', 'Birthday', 'ActiveHand', 'TrivialName', 'GivenName', 'Disabilities', 'Character']
 
-monkeyL_subject_dict = create_participants_df(monkeyL_metadata, participants_tsv_headers, odml_keys)
-monkeyN_subject_dict = create_participants_df(monkeyN_metadata, participants_tsv_headers, odml_keys)
+monkeyL_subject_dict = create_metadata_df(monkeyL_metadata, 'Subject', participants_tsv_headers, odml_keys)
+monkeyN_subject_dict = create_metadata_df(monkeyN_metadata, 'Subject', participants_tsv_headers, odml_keys)
 
-participants_df = pd.DataFrame([monkeyL_subject_dict, monkeyN_subject_dict])
+participants_df = pd.concat([monkeyL_subject_dict, monkeyN_subject_dict], ignore_index=True)
 save_to_tsv(participants_df, base_dir, 'participants.tsv')
 
 participants_json_path = os.path.join(base_dir, 'participants.json')
 create_json_for_tsv(monkeyL_metadata, participants_tsv_headers, odml_keys, participants_json_path, 'Subject')
 
+
+# Sessions files
 sessions_tsv_headers = ['session_id', 'acq_time', 'session_date', 'session_weekday', 'is_noisy', 'session_duration', 'is_spikesorted',  'task', 'comment', 'number_of_trials', 'number_of_correct_trials', 'number_of_grip_error_trials', 'standard_settings']
 sessions_odml_keys = ['RecordingDay', 'Time', 'Date', 'Weekday', 'Noisy', 'Duration', 'IsSpikeSorted', 'TaskType', 'Comment', 'TaskSettings/TotalTrialCount', 'TaskSettings/CorrectTrialCount', 'TaskSettings/GripErrorTrialCount', 'TaskSettings/StandardSettings']
 
-monkeyL_sessions_df = create_sessions_df(monkeyL_metadata, sessions_tsv_headers, sessions_odml_keys)
-monkeyN_sessions_df = create_sessions_df(monkeyN_metadata, sessions_tsv_headers, sessions_odml_keys)
+monkeyL_sessions_df = create_metadata_df(monkeyL_metadata, 'Recording', sessions_tsv_headers, sessions_odml_keys)
+monkeyN_sessions_df = create_metadata_df(monkeyN_metadata, 'Recording', sessions_tsv_headers, sessions_odml_keys)
 
 sessions_df = pd.concat([monkeyL_sessions_df, monkeyN_sessions_df], ignore_index=True)
 save_to_tsv(sessions_df, base_dir, 'sessions.tsv')
@@ -215,12 +170,40 @@ save_to_tsv(sessions_df, base_dir, 'sessions.tsv')
 sessions_json_path = os.path.join(base_dir, 'sessions.json')
 create_json_for_tsv(monkeyL_metadata, sessions_tsv_headers, sessions_odml_keys, sessions_json_path, 'Recording')
 
+# Probes files
+
 # probes_tsv_headers = ['probe_id', 'type', 'manufacturer', 'device_serial_number', 'contact_count', 'width', 'height', 'depth', 'dimension_unit', 'coordinate_reference_point', 'hemisphere', 'associated_brain_region', 'associated_brain_region_quality_type', 'reference_atlas', 'material']
 probes_tsv_headers = ['manufacturer', 'device_serial_number', 'contact_count', 'width', 'height', 'material', 'probe_geometry','active_contacts', 'used_contacts' ]
 probes_odml_keys = ['Manufacturer', 'SerialNo', 'Array/ElectrodeCount', 'Array/Grid_01/GridWidth', 'Array/Grid_01/GridLength', 'Array/Grid_01/ElectrodeMetal', 'Array/Grid_01/ElectrodeGeometry', 'Array/ActiveElectrodeCount', 'Array/Grid_01/UsedElectrodeCount']
 
-monkeyL_probes_df = create_probes_df(monkeyL_metadata, probes_tsv_headers, probes_odml_keys)
-monkeyN_probes_df = create_probes_df(monkeyN_metadata, probes_tsv_headers, probes_odml_keys)
+monkeyL_probes_df = create_metadata_df(monkeyL_metadata, 'UtahArray', probes_tsv_headers, probes_odml_keys)
+monkeyN_probes_df = create_metadata_df(monkeyN_metadata, 'UtahArray', probes_tsv_headers, probes_odml_keys)
 
 save_to_tsv(monkeyL_probes_df, base_dir, 'sub-l/ses-101210/ephys/sub-l_ses-101210_task-r2g_run-001_probes.tsv')
 save_to_tsv(monkeyN_probes_df, base_dir, 'sub-i/ses-140703/ephys/sub-i_ses-140703_task-r2g_run-001_probes.tsv')
+
+# Contacts files
+
+# contacts_tsv_headers = ['contact_id', 'probe_id', 'hemisphere', 'x', 'y', 'z', 'physical_unit', 'impedance', 'impedance_unit', 'shank_id', 'contact_size', 'contact_shape', 'material', 'location', 'insulation', 'pipette_solution', 'internal_pipette_diameter', 'external_pipette_diameter']
+contacts_tsv_headers = ['contact_id', 'probe_id', 'bank_id', 'pin_id', 'connector_aligned_id', 'impedance', 'length']
+contacts_odml_keys = ['ID', 'GridID', 'BankID', 'PinID', 'ConnectorAlignedID', 'Impedance', 'Length']
+
+monkeyL_electrode_df = pd.DataFrame(columns=contacts_tsv_headers)
+for electrode in monkeyL_metadata['UtahArray']['Array'].sections:
+    if electrode.name.startswith('Electrode'):
+        electrode_df = create_metadata_df(electrode, None, contacts_tsv_headers, contacts_odml_keys)
+        monkeyL_electrode_df = pd.concat([monkeyL_electrode_df, electrode_df], ignore_index=True)
+        
+monkeyL_electrode_df['impedance_unit'] = 'kOhm' 
+monkeyL_electrode_df['length_unit'] = 'mm' 
+save_to_tsv(monkeyL_electrode_df, base_dir, 'sub-l/ses-101210/ephys/sub-l_ses-101210_task-r2g_run-001_contacts.tsv')
+
+monkeyN_electrode_df = pd.DataFrame(columns=contacts_tsv_headers)
+for electrode in monkeyN_metadata['UtahArray']['Array'].sections:
+    if electrode.name.startswith('Electrode'):
+        electrode_df = create_metadata_df(electrode, None, contacts_tsv_headers, contacts_odml_keys)
+        monkeyN_electrode_df = pd.concat([monkeyN_electrode_df, electrode_df], ignore_index=True)
+        
+monkeyN_electrode_df['impedance_unit'] = 'kOhm'   
+monkeyN_electrode_df['length_unit'] = 'mm'   
+save_to_tsv(monkeyN_electrode_df, base_dir, 'sub-i/ses-140703/ephys/sub-i_ses-101210_task-r2g_run-001_contacts.tsv')

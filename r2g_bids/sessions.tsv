@@ -1,0 +1,3 @@
+session_id	acq_time	session_date	session_weekday	is_noisy	session_duration	is_spikesorted	task	comment	number_of_trials	number_of_correct_trials	number_of_grip_error_trials	standard_settings
+l101210	10:50:10	2010-12-10	Friday	True	709	True	TwoCues	no comment	204	135	14	True
+i140703	10:40:59	2014-07-03	Thursday	True	1003	True	TwoCues	-	161	142	10	True

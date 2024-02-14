@@ -1,0 +1,3 @@
+participant_id	species	sex	birthdate	handedness	trivial_name	given_name	disabilities	character
+l	Macaca mulatta	female	2004-03-19	left	Rhesus monkey	monkey_L	Middle phalanx of right thumb is missing.	Eager to work, quick and efficient but very nervous. Does not like to be touched (for instance for RF testing).
+i	Macaca mulatta	male	2008-05-17	left	Rhesus monkey	monkey_N	-	Calm, but overall not really motivated. Less attentive.

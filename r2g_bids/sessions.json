@@ -1,0 +1,41 @@
+{
+    "session_id": {
+        "Description": "Identifier of the recording day"
+    },
+    "acq_time": {
+        "Description": "Time of day when recording was started"
+    },
+    "session_date": {
+        "Description": "Date of session"
+    },
+    "session_weekday": {
+        "Description": "Weekday of session"
+    },
+    "is_noisy": {
+        "Description": "Qualitative statement whether the recording contains noisy channels and/or time periods."
+    },
+    "session_duration": {
+        "Description": "Duration of recording"
+    },
+    "is_spikesorted": {
+        "Description": "States if a spike sorting was performed for this recording"
+    },
+    "task": {
+        "Description": "Performed task type"
+    },
+    "comment": {
+        "Description": "Comment about the recording"
+    },
+    "number_of_trials": {
+        "Description": "No definition found"
+    },
+    "number_of_correct_trials": {
+        "Description": "No definition found"
+    },
+    "number_of_grip_error_trials": {
+        "Description": "No definition found"
+    },
+    "standard_settings": {
+        "Description": "No definition found"
+    }
+}
