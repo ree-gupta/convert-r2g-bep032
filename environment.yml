@@ -1,0 +1,11 @@
+name: r2g_bids
+channels:
+  - defaults
+dependencies:
+  - python
+  - ipykernel
+  - jupyter
+  - pip
+  - pip:
+    - BEP032tools==0.3.3.dev0
+    - odml==1.5.3
