@@ -159,6 +159,26 @@ def create_sessions_df(metadata, sessions_tsv_headers, sessions_odml_keys):
 
     return sessions_df
 
+def create_probes_df(metadata, probes_tsv_headers, probes_odml_keys):
+    """
+    Creates a DataFrame for probes information based on metadata.
+
+    Parameters:
+    metadata (odml.Document): The odML document containing session metadata.
+    sessions_tsv_headers (list): List of headers for the sessions TSV file.
+    sessions_odml_keys (list): List of odML keys corresponding to the TSV headers.
+
+    Returns:
+    pandas.DataFrame: A DataFrame containing session information.
+    """
+    probes_df = pd.DataFrame(columns=probes_tsv_headers)
+    probes_odml = metadata['UtahArray']
+    for header, key in zip(probes_tsv_headers, probes_odml_keys):
+        probes_value = extract_odml_value(probes_odml, key)
+        probes_df[header] = [probes_value]
+
+    return probes_df
+
 
 # Main Execution
 subj_sess_runs = {'l': [{'101210': '001'}], 'i': [{'140703': '001'}]}
@@ -195,15 +215,12 @@ save_to_tsv(sessions_df, base_dir, 'sessions.tsv')
 sessions_json_path = os.path.join(base_dir, 'sessions.json')
 create_json_for_tsv(monkeyL_metadata, sessions_tsv_headers, sessions_odml_keys, sessions_json_path, 'Recording')
 
-## The x, y and z coordinates culd not be retrieved directly - nned more explanation - same for alpha, beta and gamma rotation angles
 # probes_tsv_headers = ['probe_id', 'type', 'manufacturer', 'device_serial_number', 'contact_count', 'width', 'height', 'depth', 'dimension_unit', 'coordinate_reference_point', 'hemisphere', 'associated_brain_region', 'associated_brain_region_quality_type', 'reference_atlas', 'material']
 probes_tsv_headers = ['manufacturer', 'device_serial_number', 'contact_count', 'width', 'height', 'material', 'probe_geometry','active_contacts', 'used_contacts' ]
 probes_odml_keys = ['Manufacturer', 'SerialNo', 'Array/ElectrodeCount', 'Array/Grid_01/GridWidth', 'Array/Grid_01/GridLength', 'Array/Grid_01/ElectrodeMetal', 'Array/Grid_01/ElectrodeGeometry', 'Array/ActiveElectrodeCount', 'Array/Grid_01/UsedElectrodeCount']
 
-# Notes
-# There should be a mention of available and active and used electrodes - maybe??
-# Not sure about - height and depth and how they relate?
-# Handling of the dimensions unit of the prbe is wierd - needs to be added seperately - too much work to automate
-# ELectrode etal, the material doesn't then necessarily belong in the probe file???
-# Need probe geometery??
+monkeyL_probes_df = create_probes_df(monkeyL_metadata, probes_tsv_headers, probes_odml_keys)
+monkeyN_probes_df = create_probes_df(monkeyN_metadata, probes_tsv_headers, probes_odml_keys)
 
+save_to_tsv(monkeyL_probes_df, base_dir, 'sub-l/ses-101210/ephys/sub-l_ses-101210_task-r2g_run-001_probes.tsv')
+save_to_tsv(monkeyN_probes_df, base_dir, 'sub-i/ses-140703/ephys/sub-i_ses-140703_task-r2g_run-001_probes.tsv')
